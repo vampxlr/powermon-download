@@ -1,0 +1,290 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PowerMon for Windows 11</title>
+<meta name="description" content="See which apps are draining your laptop battery, in watts. Free for Windows 11.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800;900&family=JetBrains+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* Primitive */
+:root{
+  --ink-950:#05060d; --ink-900:#0a0c18; --ink-850:#0f1222; --ink-800:#161a30; --ink-700:#232a4a;
+  --cyan-400:#38e8ff; --cyan-300:#7ff1ff; --magenta-400:#ff3dd4; --lime-400:#b6ff3d; --amber-400:#ffc53d;
+  --white:#f3f6ff; --mist:#b4bbd6;
+}
+/* Semantic */
+:root{
+  --bg:var(--ink-950); --surface:var(--ink-850); --surface-2:var(--ink-800); --line:var(--ink-700);
+  --text:var(--white); --subtle:var(--mist);
+  --neon-a:var(--cyan-400); --neon-b:var(--magenta-400); --neon-c:var(--lime-400); --warn:var(--amber-400);
+  --radius:14px; --gutter:16px; --dur:220ms;
+}
+*{box-sizing:border-box;margin:0}
+html{scroll-behavior:smooth;overflow-x:hidden}
+body{background:var(--bg);color:var(--text);font:16px/1.6 Inter,"Segoe UI",system-ui,sans-serif;overflow-x:hidden}
+a{color:var(--neon-a)}
+:focus-visible{outline:2px solid var(--neon-a);outline-offset:3px;border-radius:6px}
+.wrap{max-width:1160px;margin:0 auto;padding:0 var(--gutter)}
+h1,h2,h3,.brand{font-family:Orbitron,Inter,sans-serif;letter-spacing:.02em}
+code,.mono{font-family:"JetBrains Mono",ui-monospace,monospace}
+
+/* ---------- backdrop: drifting grid and flowing current ---------- */
+.bg{position:fixed;inset:0;z-index:-1;overflow:hidden;pointer-events:none}
+.bg::before{content:"";position:absolute;inset:-50%;background:
+  linear-gradient(transparent 0 calc(100% - 1px),rgba(56,232,255,.08) 0) 0 0/56px 56px,
+  linear-gradient(90deg,transparent 0 calc(100% - 1px),rgba(56,232,255,.08) 0) 0 0/56px 56px;
+  transform:perspective(600px) rotateX(58deg) translateY(0);animation:grid 14s linear infinite;mask:radial-gradient(ellipse at 50% 30%,#000 20%,transparent 70%)}
+@keyframes grid{to{transform:perspective(600px) rotateX(58deg) translateY(56px)}}
+.orb{position:absolute;border-radius:50%;filter:blur(90px);opacity:.45;animation:float 18s ease-in-out infinite}
+.orb.a{width:520px;height:520px;background:var(--neon-a);top:-160px;left:-120px}
+.orb.b{width:460px;height:460px;background:var(--neon-b);top:30%;right:-180px;animation-delay:-6s;opacity:.32}
+.orb.c{width:380px;height:380px;background:var(--neon-c);bottom:-180px;left:30%;animation-delay:-11s;opacity:.18}
+@keyframes float{50%{transform:translate(60px,40px) scale(1.12)}}
+.flow{position:absolute;inset:0;width:100%;height:100%}
+.flow path{fill:none;stroke-width:1.6;stroke-linecap:round;stroke-dasharray:10 22;animation:dash 6s linear infinite}
+.flow path:nth-child(1){stroke:var(--neon-a)} .flow path:nth-child(2){stroke:var(--neon-b);animation-duration:8s}
+.flow path:nth-child(3){stroke:var(--neon-c);animation-duration:10s;opacity:.6}
+@keyframes dash{to{stroke-dashoffset:-320}}
+
+/* ---------- nav ---------- */
+nav{position:sticky;top:0;z-index:5;backdrop-filter:blur(14px);background:rgba(5,6,13,.7);border-bottom:1px solid rgba(56,232,255,.14)}
+nav .wrap{display:flex;align-items:center;gap:28px;min-height:64px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:900;font-size:19px;color:var(--text);text-decoration:none}
+.bolt{width:28px;height:28px;filter:drop-shadow(0 0 6px var(--neon-a));animation:flicker 4s infinite}
+@keyframes flicker{0%,92%,100%{opacity:1}93%{opacity:.4}95%{opacity:1}97%{opacity:.6}}
+nav .links{display:flex;gap:22px;margin-left:auto}
+nav .links a{color:var(--subtle);text-decoration:none;font-weight:500;min-height:44px;display:flex;align-items:center;transition:color var(--dur)}
+nav .links a:hover{color:var(--neon-a);text-shadow:0 0 12px var(--neon-a)}
+
+/* ---------- buttons ---------- */
+.btn{position:relative;display:inline-flex;align-items:center;gap:12px;min-height:56px;padding:14px 28px;border-radius:var(--radius);
+  font:800 16px/1 Orbitron,sans-serif;letter-spacing:.06em;text-decoration:none;color:var(--ink-950);
+  background:linear-gradient(100deg,var(--neon-a),var(--cyan-300) 45%,var(--neon-b));background-size:200% 100%;
+  box-shadow:0 0 0 1px rgba(255,255,255,.2) inset,0 0 24px rgba(56,232,255,.55),0 0 64px rgba(255,61,212,.25);
+  animation:sheen 5s linear infinite,pulse 2.4s ease-in-out infinite;transition:transform var(--dur)}
+.btn:hover{transform:translateY(-2px) scale(1.02)}
+@keyframes sheen{to{background-position:-200% 0}}
+@keyframes pulse{50%{box-shadow:0 0 0 1px rgba(255,255,255,.3) inset,0 0 40px rgba(56,232,255,.85),0 0 110px rgba(255,61,212,.45)}}
+.btn svg{width:20px;height:20px}
+.ghost{display:inline-flex;align-items:center;min-height:56px;padding:14px 22px;border-radius:var(--radius);color:var(--text);text-decoration:none;
+  border:1px solid rgba(56,232,255,.4);transition:border-color var(--dur),box-shadow var(--dur)}
+.ghost:hover{border-color:var(--neon-a);box-shadow:0 0 20px rgba(56,232,255,.35)}
+
+/* ---------- hero ---------- */
+.hero{padding:90px 0 70px}
+.hero .wrap{display:grid;grid-template-columns:1.1fr .9fr;gap:56px;align-items:center}
+.tag{display:inline-flex;align-items:center;gap:8px;padding:6px 14px;border-radius:999px;font:500 13px "JetBrains Mono",monospace;
+  color:var(--neon-c);border:1px solid rgba(182,255,61,.4);background:rgba(182,255,61,.06)}
+.tag i{width:8px;height:8px;border-radius:50%;background:var(--neon-c);box-shadow:0 0 10px var(--neon-c);animation:blink 1.6s infinite}
+@keyframes blink{50%{opacity:.25}}
+h1{font-size:clamp(34px,5.4vw,64px);line-height:1.05;margin:22px 0 20px;font-weight:900}
+h1 .glow{background:linear-gradient(90deg,var(--neon-a),var(--neon-b),var(--neon-c),var(--neon-a));background-size:300% 100%;
+  -webkit-background-clip:text;background-clip:text;color:transparent;animation:hue 7s linear infinite;filter:drop-shadow(0 0 18px rgba(56,232,255,.45))}
+@keyframes hue{to{background-position:300% 0}}
+.lede{color:var(--subtle);font-size:18px;max-width:560px}
+.cta{display:flex;flex-wrap:wrap;gap:14px;margin:30px 0 14px}
+.meta{font:13px "JetBrains Mono",monospace;color:var(--subtle)}
+
+/* the live widget */
+.device{position:relative;padding:2px;border-radius:22px;background:conic-gradient(from var(--ang,0deg),var(--neon-a),var(--neon-b),var(--neon-c),var(--neon-a));animation:spin 6s linear infinite}
+@property --ang{syntax:"<angle>";inherits:false;initial-value:0deg}
+@keyframes spin{to{--ang:360deg}}
+.device::after{content:"";position:absolute;inset:-18px;border-radius:30px;background:inherit;filter:blur(30px);opacity:.45;z-index:-1}
+.panel{background:var(--ink-900);border-radius:20px;padding:24px}
+.watts{display:flex;align-items:baseline;gap:10px}
+.watts b{font:900 52px/1 Orbitron,sans-serif;color:var(--neon-a);text-shadow:0 0 20px var(--neon-a)}
+.watts span{color:var(--subtle);font-family:"JetBrains Mono",monospace}
+.batt{margin:8px 0 18px;color:var(--subtle);font-size:14px}
+.spark{width:100%;height:70px;margin-bottom:16px}
+.spark path.line{fill:none;stroke:var(--neon-a);stroke-width:2.2;filter:drop-shadow(0 0 6px var(--neon-a));stroke-dasharray:600;animation:draw 3.5s ease-out infinite}
+.spark path.area{fill:url(#sparkfill)}
+@keyframes draw{0%{stroke-dashoffset:600}60%,100%{stroke-dashoffset:0}}
+.app{display:grid;grid-template-columns:1fr auto;gap:4px 12px;align-items:center;padding:10px 0;border-top:1px solid var(--line)}
+.app .bar{grid-column:1/-1;height:6px;border-radius:6px;background:var(--surface-2);overflow:hidden}
+.app .bar i{display:block;height:100%;border-radius:6px;background:linear-gradient(90deg,var(--neon-a),var(--neon-b));
+  box-shadow:0 0 12px var(--neon-a);animation:breathe 2.8s ease-in-out infinite;transform-origin:left}
+.app:nth-child(2) .bar i{animation-delay:-.7s} .app:nth-child(3) .bar i{animation-delay:-1.4s}
+@keyframes breathe{50%{transform:scaleX(.82);filter:brightness(1.3)}}
+.app b{font-family:"JetBrains Mono",monospace;color:var(--neon-c)}
+.note{font-size:12px;color:var(--subtle);margin-top:10px}
+
+/* ---------- sections ---------- */
+section{padding:80px 0}
+.kicker{font:500 13px "JetBrains Mono",monospace;color:var(--neon-b);letter-spacing:.2em;text-transform:uppercase}
+h2{font-size:clamp(26px,3.4vw,40px);margin:10px 0 14px}
+.sub{color:var(--subtle);max-width:640px;margin-bottom:40px}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:20px}
+.card{position:relative;padding:28px;border-radius:var(--radius);background:linear-gradient(180deg,rgba(22,26,48,.9),rgba(10,12,24,.9));
+  border:1px solid rgba(56,232,255,.16);overflow:hidden;transition:border-color var(--dur),transform var(--dur)}
+.card::before{content:"";position:absolute;left:0;top:0;height:2px;width:40%;background:linear-gradient(90deg,transparent,var(--neon-a),transparent);
+  animation:scan 4s linear infinite}
+.card:nth-child(2)::before{animation-delay:-1s;background:linear-gradient(90deg,transparent,var(--neon-b),transparent)}
+.card:nth-child(3)::before{animation-delay:-2s;background:linear-gradient(90deg,transparent,var(--neon-c),transparent)}
+.card:nth-child(4)::before{animation-delay:-3s}
+@keyframes scan{from{transform:translateX(-100%)}to{transform:translateX(350%)}}
+.card:hover{border-color:rgba(56,232,255,.5);transform:translateY(-3px)}
+.card svg{width:34px;height:34px;color:var(--neon-a);filter:drop-shadow(0 0 8px currentColor);margin-bottom:14px}
+.card:nth-child(2) svg{color:var(--neon-b)} .card:nth-child(3) svg{color:var(--neon-c)}
+.card h3{font-size:18px;margin-bottom:12px}
+.card ul{padding-left:18px;color:var(--subtle)} .card li{margin:6px 0}
+
+/* energy rail between sections */
+.rail{height:2px;background:linear-gradient(90deg,transparent,var(--neon-a),var(--neon-b),transparent);background-size:200% 100%;animation:sheen 3s linear infinite;opacity:.7}
+
+.req{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.req div{padding:18px;border-radius:12px;background:var(--surface);border:1px solid var(--line)}
+.req dt{font:500 12px "JetBrains Mono",monospace;color:var(--neon-a);text-transform:uppercase;letter-spacing:.12em}
+.req dd{margin-top:6px}
+.warn{margin-top:28px;padding:22px;border-radius:var(--radius);border:1px solid rgba(255,197,61,.5);background:rgba(255,197,61,.06)}
+.warn h3{font-size:16px;color:var(--warn);margin-bottom:8px}
+.warn ol{padding-left:20px;color:var(--subtle)}
+.hash{display:block;margin-top:10px;padding:12px;border-radius:10px;background:var(--ink-900);color:var(--neon-c);font-size:13px;overflow-wrap:anywhere}
+details{border-bottom:1px solid var(--line);padding:18px 0}
+summary{cursor:pointer;font-weight:600;min-height:44px;display:flex;align-items:center;list-style:none}
+summary::after{content:"+";margin-left:auto;color:var(--neon-a);font:900 20px Orbitron}
+details[open] summary::after{content:"–"}
+details p{color:var(--subtle);margin-top:8px}
+.final{text-align:center;padding:100px 0}
+.final h2{font-size:clamp(28px,4vw,48px)}
+footer{padding:30px 0;color:var(--subtle);font-size:14px;border-top:1px solid var(--line)}
+
+@media (max-width:860px){
+  .hero .wrap,.grid{grid-template-columns:1fr} .req{grid-template-columns:1fr 1fr} nav .links{display:none} .hero{padding-top:50px}
+}
+@media (max-width:480px){.req{grid-template-columns:1fr} .btn{width:100%;justify-content:center}}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="bg" aria-hidden="true">
+  <div class="orb a"></div><div class="orb b"></div><div class="orb c"></div>
+  <svg class="flow" viewBox="0 0 1440 900" preserveAspectRatio="none">
+    <path d="M-20 700 C 300 560, 520 820, 820 620 S 1260 420, 1480 520"/>
+    <path d="M-20 260 C 260 380, 560 140, 900 300 S 1300 200, 1480 120"/>
+    <path d="M-20 480 C 400 420, 700 600, 1000 470 S 1300 560, 1480 400"/>
+  </svg>
+</div>
+
+<nav><div class="wrap">
+  <a class="brand" href="#"><svg class="bolt" viewBox="0 0 24 24" fill="none"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8Z" fill="#38e8ff"/></svg>PowerMon</a>
+  <div class="links"><a href="#features">Features</a><a href="#requirements">Requirements</a><a href="#faq">FAQ</a></div>
+</div></nav>
+
+<header class="hero"><div class="wrap">
+  <div>
+    <span class="tag"><i></i>For Windows 11 laptops</span>
+    <h1>See which apps are <span class="glow">draining your battery</span>, in watts.</h1>
+    <p class="lede">PowerMon ranks every app and background process by how much power it is using right now, tells you in plain English what each one is, and lets you calm the power hogs down in one click.</p>
+    <div class="cta">
+      <a class="btn" href="https://github.com/vampxlr/powermon-download/releases/latest/download/PowerMon.exe">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 3v12m0 0-5-5m5 5 5-5M4 20h16"/></svg>Download for Windows 11</a>
+      <a class="ghost" href="#requirements">Requirements</a>
+    </div>
+    <p class="meta">v0.1.0 · 71 MB · one file, no installer · free</p>
+  </div>
+
+  <div class="device" aria-label="Illustration of the PowerMon widget with example numbers">
+    <div class="panel">
+      <div class="watts"><b>12.4</b><span>W · on battery</span></div>
+      <div class="batt">73% · 2 h 41 min left</div>
+      <svg class="spark" viewBox="0 0 300 70" preserveAspectRatio="none">
+        <defs><linearGradient id="sparkfill" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#38e8ff" stop-opacity=".35"/><stop offset="1" stop-color="#38e8ff" stop-opacity="0"/></linearGradient></defs>
+        <path class="area" d="M0 50 L30 44 60 48 90 30 120 36 150 22 180 30 210 18 240 26 270 14 300 20 V70 H0Z"/>
+        <path class="line" d="M0 50 L30 44 60 48 90 30 120 36 150 22 180 30 210 18 240 26 270 14 300 20"/>
+      </svg>
+      <div class="app"><span>Browser</span><b>3.1 W</b><div class="bar"><i style="width:78%"></i></div></div>
+      <div class="app"><span>Code editor</span><b>1.8 W</b><div class="bar"><i style="width:46%"></i></div></div>
+      <div class="app"><span>Updater · background</span><b>1.2 W</b><div class="bar"><i style="width:31%"></i></div></div>
+      <div class="app"><span>Display &amp; other hardware</span><b>4.0 W</b><div class="bar"><i style="width:100%"></i></div></div>
+      <p class="note">Illustration with example numbers.</p>
+    </div>
+  </div>
+</div></header>
+
+<div class="rail"></div>
+
+<section id="features"><div class="wrap">
+  <p class="kicker">What it does</p>
+  <h2>Windows says it's draining. PowerMon says why.</h2>
+  <p class="sub">And what you would save by stopping it.</p>
+  <div class="grid">
+    <article class="card">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg>
+      <h3>See where the power goes</h3>
+      <ul><li>Live whole-laptop draw in watts, battery %, time left or time to full, and a 5-minute graph.</li>
+      <li>Breakdown by processor, graphics, memory, display and other hardware, and the idle floor.</li>
+      <li>Every app and background process ranked by estimated watts, with CPU, GPU, disk, memory and energy used today.</li></ul>
+    </article>
+    <article class="card">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <h3>Understand every process</h3>
+      <ul><li>Plain-English descriptions for about 130 common Windows, driver and app processes, with a "safe to end?" rating.</li>
+      <li>Digital-signature check, publisher, file path, which services run inside each <code>svchost.exe</code>, network connections, and whether it starts at sign-in.</li>
+      <li>Optional "Ask AI" for anything else, using your own Claude API key. Off by default.</li></ul>
+    </article>
+    <article class="card">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8Z"/></svg>
+      <h3>Save power in one click</h3>
+      <ul><li>Efficiency mode (like Task Manager), lower priority, limit CPU cores, pause and resume, or end.</li>
+      <li>Windows power mode, Turbo Boost on battery, and automatic switching when you plug in or unplug.</li>
+      <li>Rules such as "if a background app uses more than 3 W for 60 s on battery, switch it to efficiency mode". Core Windows processes are never touched.</li></ul>
+    </article>
+    <article class="card">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="18" height="10" rx="2"/><path d="M22 11v2M6 10v4M10 10v4"/></svg>
+      <h3>Battery health and widgets</h3>
+      <ul><li>Battery health against design capacity, voltage and cycle count when the firmware reports them.</li>
+      <li>24-hour charge and power history, and "what used the battery today".</li>
+      <li>A taskbar widget next to the clock, a floating widget, and a tray icon that shows live watts.</li></ul>
+    </article>
+  </div>
+</div></section>
+
+<div class="rail"></div>
+
+<section id="requirements"><div class="wrap">
+  <p class="kicker">Requirements</p>
+  <h2>Built for Windows 11 only.</h2>
+  <p class="sub">On Windows 10 or older it shows a message and closes.</p>
+  <dl class="req">
+    <div><dt>Windows</dt><dd>Windows 11 (build 22000 or later)</dd></div>
+    <div><dt>PC</dt><dd>64-bit Intel or AMD (x64)</dd></div>
+    <div><dt>Best on</dt><dd>Laptops with a battery</dd></div>
+    <div><dt>Install</dt><dd>None: download and run</dd></div>
+    <div><dt>.NET</dt><dd>Included, nothing else to install</dd></div>
+    <div><dt>Admin</dt><dd>Not needed; optional for system processes</dd></div>
+  </dl>
+  <div class="warn">
+    <h3>Windows may warn you the first time.</h3>
+    <p>PowerMon is not code-signed yet, so Microsoft Defender SmartScreen can show "Windows protected your PC". To run it:</p>
+    <ol><li>Select <b>More info</b>.</li><li>Select <b>Run anyway</b>.</li></ol>
+    <p style="margin-top:10px">Check your download (optional). In PowerShell, <code>Get-FileHash PowerMon.exe</code> should print this SHA-256:</p>
+    <code class="hash">6B02CA3EDCFDF7B34C88D1E886591CC22E872AEB4EAFCEF8BA2BF59D6EA3332C</code>
+  </div>
+</div></section>
+
+<div class="rail"></div>
+
+<section id="faq"><div class="wrap">
+  <p class="kicker">Questions</p>
+  <h2>How it works</h2>
+  <details open><summary>How can it know how many watts one app uses?</summary>
+    <p>Windows has no per-app watt meter, so PowerMon measures the totals (the battery driver and the processor's own energy counters) and splits the power above the idle floor between apps by their CPU cycles, GPU time and disk activity. It is the same idea Windows uses internally.</p>
+    <p>An app's number answers "how much would I save by stopping this?". The screen, Wi-Fi and the idle floor are shown separately, because no single app owns them. While plugged in, the total is an estimate.</p></details>
+  <details><summary>Does it work on a desktop PC?</summary>
+    <p>Yes, for per-app power and process details. Battery health, time left and battery history need a battery, so they stay empty. Windows "Power mode" only applies while the Balanced power plan is active.</p></details>
+</div></section>
+
+<section class="final"><div class="wrap">
+  <h2>Find the drain. <span style="color:var(--neon-a);text-shadow:0 0 18px var(--neon-a)">Stop it.</span></h2>
+  <div class="cta" style="justify-content:center">
+    <a class="btn" href="https://github.com/vampxlr/powermon-download/releases/latest/download/PowerMon.exe">Download for Windows 11</a>
+  </div>
+  <p class="meta">All versions on <a href="https://github.com/vampxlr/powermon-download/releases">GitHub Releases</a></p>
+</div></section>
+
+<footer><div class="wrap">PowerMon · free for Windows 11</div></footer>
+</body>
+</html>
